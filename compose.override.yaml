@@ -1,0 +1,29 @@
+services:
+  app: 
+    build:
+      target: node_dev
+    labels:
+      - "traefik.http.routers.blitz-task-client.rule=Host(`note-snap.docker.localhost`)"
+      - "traefik.http.routers.blitz-task-client-http.rule=Host(`note-snap.docker.localhost`)"
+
+    # - "traefik.http.routers.note-snap-db.rule=Host(`db.note-snap.docker.localhost`)"
+    # - "traefik.http.routers.note-snap-db.entrypoints=web"
+    # - "traefik.http.services.note-snap-db.loadbalancer.server.port=3500"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      - traefik
+    ports:
+      - 3500:3000
+    volumes:
+      - .:/app
+
+  database:
+    ports:
+      - "5432"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
