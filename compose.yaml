@@ -3,6 +3,9 @@ services:
     image: note-snap
     build:
       context: .
+    depends_on:
+      database:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.note-snap.tls=true"
@@ -13,6 +16,21 @@ services:
       - "traefik.http.services.note-snap.loadbalancer.server.port=3000"
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://note-snap.docker.localhost}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-development-secret-key-change-this-in-production-make-it-long-and-secure}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-dummy}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-dummy}
+      - GITHUB_ID=${GITHUB_ID:-dummy}
+      - GITHUB_SECRET=${GITHUB_SECRET:-dummy}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-dummy}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-dummy}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - pnpm_store:/app/.pnpm-store
 
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
@@ -33,3 +51,4 @@ services:
 
 volumes:
   database_data:
+  pnpm_store:

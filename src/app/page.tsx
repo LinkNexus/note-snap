@@ -1,9 +1,17 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, Brain, Clock, FileText, Shield, Sparkles, Target, Users, Zap } from "lucide-react"
-import Link from "next/link"
+'use client'
+
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BookOpen, Brain, Clock, FileText, LogOut, Shield, Sparkles, Target, Users, Zap } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 
 export default function LandingPage() {
+  const { data: session } = useSession()
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/' })
+  }
   return (
     <div className="min-h-screen bg-background cyber-grid">
       {/* Header */}
@@ -31,12 +39,31 @@ export default function LandingPage() {
             </Link>
           </nav>
           <div className="flex items-center gap-2 sm:gap-3">
-            <Button variant="ghost" asChild className="font-mono text-xs sm:text-sm px-2 sm:px-4">
-              <Link href="/login">SIGN_IN</Link>
-            </Button>
-            <Button asChild className="font-mono bg-primary hover:bg-primary/90 glow-effect text-xs sm:text-sm px-3 sm:px-4">
-              <Link href="/dashboard">INITIALIZE</Link>
-            </Button>
+            {session ? (
+              <>
+                <Button variant="ghost" asChild className="font-mono text-xs sm:text-sm px-2 sm:px-4">
+                  <Link href="/dashboard">DASHBOARD</Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSignOut}
+                  className="font-mono text-xs sm:text-sm px-2 sm:px-4 border-destructive/50 text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">SIGN_OUT</span>
+                  <span className="sm:hidden">OUT</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" asChild className="font-mono text-xs sm:text-sm px-2 sm:px-4">
+                  <Link href="/login">SIGN_IN</Link>
+                </Button>
+                <Button asChild className="font-mono bg-primary hover:bg-primary/90 glow-effect text-xs sm:text-sm px-3 sm:px-4">
+                  <Link href="/dashboard">INITIALIZE</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -63,9 +90,9 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4 sm:px-0">
             <Button size="lg" className="w-full sm:w-auto text-sm sm:text-lg px-6 sm:px-10 py-3 sm:py-4 font-mono bg-primary hover:bg-primary/90 glow-effect">
-              <Link href="/dashboard" className="flex items-center gap-2 justify-center">
+              <Link href={session ? "/dashboard" : "/signup"} className="flex items-center gap-2 justify-center">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
-                ENGAGE_SYSTEM
+                {session ? "OPEN_DASHBOARD" : "ENGAGE_SYSTEM"}
               </Link>
             </Button>
             <Button

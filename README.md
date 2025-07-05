@@ -1,36 +1,167 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NOTE_SNAP
+
+A modern note-taking and summarization application built with Next.js 15, featuring robust authentication, email verification, and AI-powered summarization capabilities.
+
+## Features
+
+- 🔐 **Robust Authentication System**
+  - Email/password authentication
+  - Social login (Google, GitHub, Discord)
+  - Email verification requirement
+  - Password reset functionality
+
+- 📧 **Email Verification**
+  - Multi-provider email support (Gmail, Outlook, SendGrid, etc.)
+  - Custom HTML email templates
+  - Automatic session refresh on verification
+  - Development mode console logging
+
+- 🐳 **Docker Support**
+  - Containerized application
+  - PostgreSQL database
+  - pgAdmin for database management
+  - Health checks and monitoring
+
+- 🎨 **Modern UI**
+  - Cyber-themed design
+  - Responsive layout
+  - Dark mode support
+  - Smooth animations
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ or Docker
+- PostgreSQL database (or use Docker Compose)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd note-snap
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env.local
+   ```
+
+4. **Configure your environment**
+   - Copy the relevant email configuration from `.env.email.example`
+   - Set up your database connection
+   - Configure OAuth providers (optional)
+
+### Development
+
+#### Using Docker (Recommended)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Start all services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+#### Using Node.js
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Start the development server
+pnpm dev
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# In another terminal, start the database
+docker compose up -d postgres
+```
 
-## Learn More
+## Email Configuration
 
-To learn more about Next.js, take a look at the following resources:
+The application supports multiple email providers for sending verification emails:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Gmail
+```env
+EMAIL_SERVICE=gmail
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password  # Generate at https://myaccount.google.com/apppasswords
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Outlook/Hotmail
+```env
+EMAIL_SERVICE=outlook
+EMAIL_USER=your-email@outlook.com
+EMAIL_PASS=your-password
+```
 
-## Deploy on Vercel
+### SendGrid
+```env
+EMAIL_SERVICE=sendgrid
+SENDGRID_API_KEY=your-sendgrid-api-key
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Custom SMTP
+```env
+EMAIL_SERVICE=smtp
+SMTP_HOST=smtp.your-provider.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-username
+SMTP_PASS=your-password
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Testing Email Configuration
+
+```bash
+# Test your email configuration
+node scripts/test-email.js your-email@example.com
+
+# Interactive email setup helper
+node scripts/setup-email.js
+```
+
+## Development
+
+### Adding New Email Providers
+
+1. Add the configuration to `EmailVerificationService.createTransporter()`
+2. Add environment variable examples to `.env.email.example`
+3. Update the README with configuration instructions
+
+### Customizing Email Templates
+
+Edit the HTML templates in `EmailVerificationService.sendVerificationEmail()` and `EmailVerificationService.sendPasswordResetEmail()`.
+
+## Scripts
+
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint
+- `node scripts/test-email.js <email>` - Test email configuration
+- `node scripts/setup-email.js` - Interactive email setup helper
+- `scripts/setup-db.sh` - Set up database
+- `scripts/test-setup.sh` - Test application setup
+
+## Troubleshooting
+
+### Email Issues
+
+1. **Gmail**: Use App Passwords, not regular passwords
+2. **Outlook**: May require additional security settings
+3. **Corporate Email**: Check firewall and security policies
+4. **Development**: Set `EMAIL_ENABLED=false` to use console logging
+
+### Testing Email Configuration
+
+```bash
+# Test your email configuration
+node scripts/test-email.js your-email@example.com
+```
