@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft, LogOut, Mail, RotateCcw, Shield, Terminal } from 'lucide-react'
-import { useSession, signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function ForgotPasswordPage() {
     const { data: session, status } = useSession()

@@ -24,7 +24,7 @@ import {
   TrendingUp,
   User,
 } from "lucide-react"
-import { useSession, signOut } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
 
 export default function Dashboard() {
@@ -133,7 +133,7 @@ export default function Dashboard() {
                 {requiresVerification && <Lock className="w-3 h-3 ml-1 text-primary-foreground/70" />}
               </Link>
             </Button>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full">
@@ -166,7 +166,7 @@ export default function Dashboard() {
                   SYSTEM_SETTINGS
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="font-mono text-sm text-destructive focus:text-destructive"
                   onClick={handleSignOut}
                 >

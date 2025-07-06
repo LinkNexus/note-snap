@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Brain, Clock, FileText, LogOut, Shield, Sparkles, Target, Users, Zap } from "lucide-react";
-import { useSession, signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 
 export default function LandingPage() {
