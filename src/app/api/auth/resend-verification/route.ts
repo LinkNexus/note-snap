@@ -1,16 +1,12 @@
 import { EmailVerificationService } from '@/lib/email-verification'
+import { resendVerificationSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
-
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      )
-    }
+    const body = await request.json()
+    const { email } = resendVerificationSchema.parse(body)
 
     const token = await EmailVerificationService.resendVerification(email)
     await EmailVerificationService.sendVerificationEmail(email, token)
@@ -20,8 +16,15 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: error.errors },
+        { status: 400 }
+      )
+    }
+
     const errorMessage = error instanceof Error ? error.message : 'Failed to send verification email'
-    
+
     return NextResponse.json(
       { error: errorMessage },
       { status: 400 }

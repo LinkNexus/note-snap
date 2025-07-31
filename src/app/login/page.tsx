@@ -5,18 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { loginSchema } from '@/lib/validations'
 import { Eye, EyeOff, Github, Lock, LogOut, Mail, Shield, Terminal } from 'lucide-react'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { FaDiscord, FaGoogle } from 'react-icons/fa'
+import { z } from 'zod'
 
 export default function LoginPage() {
     const { data: session, status } = useSession()
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -32,6 +35,25 @@ export default function LoginPage() {
 
     const handleSignOut = async () => {
         await signOut({ callbackUrl: '/login' })
+    }
+
+    const validateForm = (data: typeof formData) => {
+        try {
+            loginSchema.parse(data)
+            setValidationErrors({})
+            return true
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                const errors: Record<string, string> = {}
+                error.errors.forEach((err) => {
+                    if (err.path[0]) {
+                        errors[err.path[0] as string] = err.message
+                    }
+                })
+                setValidationErrors(errors)
+            }
+            return false
+        }
     }
 
     // Show loading while checking session
@@ -104,6 +126,9 @@ export default function LoginPage() {
         setError('')
 
         try {
+            // Validate form data with Zod schema
+            await loginSchema.parseAsync(formData)
+
             const result = await signIn('credentials', {
                 email: formData.email,
                 password: formData.password,
@@ -116,7 +141,12 @@ export default function LoginPage() {
                 router.push('/dashboard')
             }
         } catch (error) {
-            setError('An error occurred. Please try again.')
+            if (error instanceof z.ZodError) {
+                // Handle Zod validation errors
+                setError(error.errors.map(err => err.message).join(', '))
+            } else {
+                setError('An error occurred. Please try again.')
+            }
         } finally {
             setIsLoading(false)
         }

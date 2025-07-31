@@ -157,9 +157,11 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="font-mono text-sm">
-                  <User className="mr-2 h-4 w-4" />
-                  PROFILE_CONFIG
+                <DropdownMenuItem className="font-mono text-sm" asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    PROFILE_CONFIG
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="font-mono text-sm">
                   <Settings className="mr-2 h-4 w-4" />

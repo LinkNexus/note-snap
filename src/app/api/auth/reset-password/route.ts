@@ -1,28 +1,19 @@
 import { prisma } from '@/lib/db'
+import { resetPasswordSchema } from '@/lib/validations'
 import bcrypt from 'bcryptjs'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 export async function POST(request: NextRequest) {
     try {
-        const { token, password } = await request.json()
+        const body = await request.json()
 
-        if (!token || !password) {
-            return NextResponse.json(
-                { error: 'Token and password are required' },
-                { status: 400 }
-            )
-        }
-
-        if (password.length < 6) {
-            return NextResponse.json(
-                { error: 'Password must be at least 6 characters long' },
-                { status: 400 }
-            )
-        }
+        // Validate request body with zod
+        const validatedData = resetPasswordSchema.parse(body)
 
         // Find the reset token
         const resetToken = await prisma.passwordResetToken.findUnique({
-            where: { token }
+            where: { token: validatedData.token }
         })
 
         if (!resetToken) {
@@ -36,7 +27,7 @@ export async function POST(request: NextRequest) {
         if (resetToken.expires < new Date()) {
             // Delete expired token
             await prisma.passwordResetToken.delete({
-                where: { token }
+                where: { token: validatedData.token }
             })
             return NextResponse.json(
                 { error: 'Token has expired' },
@@ -45,7 +36,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Hash the new password
-        const hashedPassword = await bcrypt.hash(password, 12)
+        const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
         // Update the user's password
         await prisma.user.update({
@@ -55,7 +46,7 @@ export async function POST(request: NextRequest) {
 
         // Delete the used token
         await prisma.passwordResetToken.delete({
-            where: { token }
+            where: { token: validatedData.token }
         })
 
         return NextResponse.json(
@@ -63,6 +54,16 @@ export async function POST(request: NextRequest) {
             { status: 200 }
         )
     } catch (error) {
+        if (error instanceof z.ZodError) {
+            return NextResponse.json(
+                {
+                    error: 'Validation failed',
+                    details: error.errors
+                },
+                { status: 400 }
+            )
+        }
+
         console.error('Password reset error:', error)
         return NextResponse.json(
             { error: 'Internal server error' },

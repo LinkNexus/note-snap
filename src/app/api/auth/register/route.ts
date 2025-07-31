@@ -1,23 +1,20 @@
 import { prisma } from '@/lib/db'
 import { EmailVerificationService } from '@/lib/email-verification'
+import { signupSchema } from '@/lib/validations'
 import bcrypt from 'bcryptjs'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await request.json()
+    const body = await request.json()
 
-    // Validate required fields
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { error: 'Name, email, and password are required' },
-        { status: 400 }
-      )
-    }
+    // Validate request body with zod
+    const validatedData = signupSchema.parse(body)
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email: validatedData.email }
     })
 
     if (existingUser) {
@@ -28,21 +25,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
+    const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
     // Create user
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: validatedData.name,
+        email: validatedData.email,
         password: hashedPassword,
       },
     })
 
     // Generate and send verification email
     try {
-      const verificationToken = await EmailVerificationService.generateVerificationToken(email)
-      await EmailVerificationService.sendVerificationEmail(email, verificationToken)
+      const verificationToken = await EmailVerificationService.generateVerificationToken(validatedData.email)
+      await EmailVerificationService.sendVerificationEmail(validatedData.email, verificationToken)
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError)
       // Don't fail registration if email sending fails
@@ -51,13 +48,23 @@ export async function POST(request: NextRequest) {
     // Return user without password
     const { password: _, ...userWithoutPassword } = user
     return NextResponse.json(
-      { 
+      {
         ...userWithoutPassword,
         message: 'Registration successful. Please check your email for verification link.'
-      }, 
+      },
       { status: 201 }
     )
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors
+        },
+        { status: 400 }
+      )
+    }
+
     console.error('Registration error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

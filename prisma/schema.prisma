@@ -41,16 +41,23 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime? @map("email_verified")
-  image         String?
-  password      String?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  accounts      Account[]
-  sessions      Session[]
+  id                 String    @id @default(cuid())
+  name               String?
+  email              String    @unique
+  emailVerified      DateTime? @map("email_verified")
+  image              String?
+  password           String?
+  bio                String?
+  website            String?
+  github             String?
+  // Preferences
+  emailNotifications Boolean   @default(true) @map("email_notifications")
+  publicProfile      Boolean   @default(false) @map("public_profile")
+  shareAnalytics     Boolean   @default(true) @map("share_analytics")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  accounts           Account[]
+  sessions           Session[]
 
   @@map("users")
 }

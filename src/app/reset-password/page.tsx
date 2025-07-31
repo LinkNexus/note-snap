@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useResetPassword } from '@/hooks/use-api'
+import { resetPasswordSchema } from '@/lib/validations'
 import { ArrowLeft, CheckCircle, Eye, EyeOff, Lock, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { z } from 'zod'
 
 export default function ResetPasswordPage() {
     const [isLoading, setIsLoading] = useState(false)
@@ -23,6 +26,8 @@ export default function ResetPasswordPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const token = searchParams.get('token')
+
+    const resetPasswordMutation = useResetPassword()
 
     useEffect(() => {
         // Verify token on mount
@@ -56,44 +61,44 @@ export default function ResetPasswordPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
-        setIsLoading(true)
 
-        if (password !== confirmPassword) {
-            setError('Passwords do not match')
-            setIsLoading(false)
+        if (!token) {
+            setError('Invalid or missing token')
             return
         }
 
-        if (password.length < 6) {
-            setError('Password must be at least 6 characters long')
-            setIsLoading(false)
-            return
-        }
-
+        // Validate form data with zod
         try {
-            const response = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ token, password })
+            resetPasswordSchema.parse({
+                token,
+                password,
+                confirmPassword,
             })
-
-            const data = await response.json()
-
-            if (response.ok) {
-                setSuccess(true)
-                setTimeout(() => {
-                    router.push('/login')
-                }, 2000)
-            } else {
-                setError(data.error || 'Failed to reset password')
-            }
         } catch (error) {
-            setError('An error occurred. Please try again.')
-        } finally {
-            setIsLoading(false)
+            if (error instanceof z.ZodError) {
+                const firstError = error.errors[0]
+                if (firstError.path[0] !== 'token') {
+                    setError(firstError.message)
+                }
+            }
+            return
         }
+
+        // Use React Query mutation
+        resetPasswordMutation.mutate(
+            { token, password, confirmPassword },
+            {
+                onSuccess: () => {
+                    setSuccess(true)
+                    setTimeout(() => {
+                        router.push('/login')
+                    }, 2000)
+                },
+                onError: (error) => {
+                    setError(error.message)
+                },
+            }
+        )
     }
 
     if (validToken === null) {
@@ -305,9 +310,9 @@ export default function ResetPasswordPage() {
                         <Button
                             type="submit"
                             className="w-full font-mono bg-primary hover:bg-primary/90 glow-effect"
-                            disabled={isLoading}
+                            disabled={resetPasswordMutation.isPending}
                         >
-                            {isLoading ? (
+                            {resetPasswordMutation.isPending ? (
                                 <div className="flex items-center gap-2">
                                     <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
                                     UPDATING_PASSWORD...

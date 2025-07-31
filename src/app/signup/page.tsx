@@ -6,12 +6,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { signupSchema } from '@/lib/validations'
 import { Eye, EyeOff, Github, Lock, LogOut, Mail, Shield, Terminal, User, UserPlus } from 'lucide-react'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { FaDiscord, FaGoogle } from 'react-icons/fa'
+import { z } from 'zod'
 
 export default function SignupPage() {
     const { data: session, status } = useSession()
@@ -19,6 +21,7 @@ export default function SignupPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -37,6 +40,25 @@ export default function SignupPage() {
 
     const handleSignOut = async () => {
         await signOut({ callbackUrl: '/signup' })
+    }
+
+    const validateForm = (data: typeof formData) => {
+        try {
+            signupSchema.parse(data)
+            setValidationErrors({})
+            return true
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                const errors: Record<string, string> = {}
+                error.errors.forEach((err) => {
+                    if (err.path[0]) {
+                        errors[err.path[0] as string] = err.message
+                    }
+                })
+                setValidationErrors(errors)
+            }
+            return false
+        }
     }
 
     // Show loading while checking session
@@ -105,20 +127,20 @@ export default function SignupPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setIsLoading(true)
         setError('')
+        setValidationErrors({})
 
-        if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match')
-            setIsLoading(false)
+        // Validate form data
+        if (!validateForm(formData)) {
             return
         }
 
         if (!formData.acceptTerms) {
             setError('Please accept the terms and conditions')
-            setIsLoading(false)
             return
         }
+
+        setIsLoading(true)
 
         try {
             const response = await fetch('/api/auth/register', {
@@ -130,14 +152,28 @@ export default function SignupPage() {
                     name: formData.name,
                     email: formData.email,
                     password: formData.password,
+                    confirmPassword: formData.confirmPassword,
                 }),
             })
 
-            const data = await response.json()
-
             if (!response.ok) {
-                throw new Error(data.error || 'Registration failed')
+                const errorData = await response.json()
+                if (errorData.details) {
+                    // Handle zod validation errors from server
+                    const errors: Record<string, string> = {}
+                    errorData.details.forEach((err: any) => {
+                        if (err.path[0]) {
+                            errors[err.path[0] as string] = err.message
+                        }
+                    })
+                    setValidationErrors(errors)
+                } else {
+                    setError(errorData.error || 'Registration failed')
+                }
+                return
             }
+
+            const data = await response.json()
 
             // Show success message about email verification
             setError(`✅ ${data.message || 'Registration successful! Please check your email for verification link.'}`)
@@ -152,8 +188,8 @@ export default function SignupPage() {
             if (result?.error) {
                 setError('Registration successful but login failed. Please try logging in manually.')
             } else {
-                // Redirect to verification page after successful registration
-                router.push('/verify-email')
+                // Redirect to dashboard after successful registration
+                router.push('/dashboard')
             }
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Registration failed')
@@ -216,6 +252,11 @@ export default function SignupPage() {
                                 className="font-mono text-sm bg-background/50 border-border/70 focus:border-primary"
                                 required
                             />
+                            {validationErrors.name && (
+                                <p className="text-xs font-mono text-destructive">
+                                    {'>'} {validationErrors.name}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -232,6 +273,11 @@ export default function SignupPage() {
                                 className="font-mono text-sm bg-background/50 border-border/70 focus:border-primary"
                                 required
                             />
+                            {validationErrors.email && (
+                                <p className="text-xs font-mono text-destructive">
+                                    {'>'} {validationErrors.email}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -263,6 +309,11 @@ export default function SignupPage() {
                                     )}
                                 </Button>
                             </div>
+                            {validationErrors.password && (
+                                <p className="text-xs font-mono text-destructive">
+                                    {'>'} {validationErrors.password}
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -294,6 +345,11 @@ export default function SignupPage() {
                                     )}
                                 </Button>
                             </div>
+                            {validationErrors.confirmPassword && (
+                                <p className="text-xs font-mono text-destructive">
+                                    {'>'} {validationErrors.confirmPassword}
+                                </p>
+                            )}
                         </div>
 
                         <div className="flex items-center space-x-2">

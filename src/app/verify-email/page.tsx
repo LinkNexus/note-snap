@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useResendVerification, useVerifyEmail } from '@/hooks/use-api'
 import { ArrowLeft, CheckCircle, Mail, RotateCcw, XCircle } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -13,10 +14,28 @@ export default function VerifyEmailPage() {
   const [isVerified, setIsVerified] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const { update } = useSession()
+  const { data: session, update } = useSession()
 
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
+
+  const verifyEmailMutation = useVerifyEmail()
+  const resendVerificationMutation = useResendVerification()
+
+  const handleResendVerification = () => {
+    // Try to get email from session, otherwise ask user
+    const userEmail = session?.user?.email || prompt('Please enter your email address:')
+    if (userEmail) {
+      resendVerificationMutation.mutate(
+        { email: userEmail },
+        {
+          onError: (error: any) => {
+            setError(`Failed to send verification email: ${error.message}`)
+          },
+        }
+      )
+    }
+  }
 
   useEffect(() => {
     if (!token) {
@@ -25,36 +44,28 @@ export default function VerifyEmailPage() {
       return
     }
 
-    verifyEmail(token)
-  }, [token])
+    console.log('Attempting to verify email with token:', token)
 
-  const verifyEmail = async (verificationToken: string) => {
-    try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    // Use React Query mutation to verify email
+    verifyEmailMutation.mutate(
+      { token },
+      {
+        onSuccess: (data) => {
+          console.log('Verification successful:', data)
+          setIsVerified(true)
+          setMessage(data.message || 'Email verified successfully!')
+          setIsLoading(false)
+          // Reload the session to update emailVerified status
+          update()
         },
-        body: JSON.stringify({ token: verificationToken }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setIsVerified(true)
-        setMessage(data.message)
-
-        // Reload the session to update emailVerified status
-        await update()
-      } else {
-        setError(data.error)
+        onError: (error: any) => {
+          console.error('Verification failed:', error)
+          setError(error.message || 'Email verification failed')
+          setIsLoading(false)
+        },
       }
-    } catch (error) {
-      setError('Verification failed. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    )
+  }, [token, verifyEmailMutation.mutate, update])
 
   if (isLoading) {
     return (
@@ -125,6 +136,12 @@ export default function VerifyEmailPage() {
                 You can now access all NOTE_SNAP features.
               </p>
             )}
+
+            {resendVerificationMutation.isSuccess && !isVerified && (
+              <p className="text-xs font-mono text-green-600">
+                ✅ Verification email sent! Please check your inbox.
+              </p>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -146,11 +163,12 @@ export default function VerifyEmailPage() {
 
                 <Button
                   variant="outline"
-                  onClick={() => window.location.href = '/resend-verification'}
+                  onClick={handleResendVerification}
+                  disabled={resendVerificationMutation.isPending}
                   className="w-full font-mono bg-background/50 border-border/70 hover:bg-accent/50 hover:border-accent"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
-                  RESEND_VERIFICATION
+                  {resendVerificationMutation.isPending ? 'SENDING...' : 'RESEND_VERIFICATION'}
                 </Button>
               </>
             )}
